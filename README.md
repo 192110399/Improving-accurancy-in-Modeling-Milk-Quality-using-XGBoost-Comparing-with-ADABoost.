@@ -1,19 +1,18 @@
 # Milk Quality Prediction: XGBoost vs AdaBoost
 
-A reproducible machine-learning classification project that compares **XGBoost** and **AdaBoost** for predicting milk quality (Low, Medium, High) from physicochemical and sensory attributes.
+A reproducible machine-learning classification project comparing **XGBoost** and **AdaBoost** for predicting milk quality (Low, Medium, High) from physicochemical and sensory attributes.
 
-> **Research integrity:** this repository does not claim a pre-computed accuracy. Run the pipeline on the downloaded dataset to generate metrics from a reproducible train/test split. Results depend on the dataset version and environment.
+> **Research integrity:** this repository does not claim a pre-computed accuracy. Run the pipeline on the dataset to generate metrics from a reproducible train/test split. Results depend on the dataset version and methodology.
 
 ## Research objective
-To evaluate whether gradient-boosted trees (XGBoost) provide better predictive performance than AdaBoost on the same milk-quality dataset, using identical train/test partitions and multiple classification metrics.
+Evaluate whether XGBoost provides better predictive performance than AdaBoost on the same milk-quality dataset, using identical partitions and multiple classification metrics.
 
 ## Dataset
-This project is designed for the public [Milk Quality dataset on Kaggle](https://www.kaggle.com/datasets/cpluzshrijayan/milkquality). The commonly distributed file contains 1,059 observations and columns similar to:
+Public [Milk Quality dataset on Kaggle](https://www.kaggle.com/datasets/cpluzshrijayan/milkquality). The commonly distributed file has 1,059 observations and 7 input attributes: pH, temperature (sometimes misspelled `Temprature`), taste, odor, fat, turbidity and colour/color. The target `Grade` has three classes: Low, Medium and High. These dataset attributes and labels are described in the dataset documentation. [Dataset feature description](https://github.com/shubhamoypaul-svmy/Milk-Quality-Prediction) · [Related research description](https://dergipark.org.tr/en/download/article-file/2673216).
 
-- Inputs: `pH`, `Temprature` (or `Temperature`), `Taste`, `Odor`, `Fat`, `Turbidity`, `Colour` (or `Color`)
-- Target: `Grade` (Low, Medium, High)
+**Important data-quality note:** public copies may contain many repeated rows. The training pipeline removes exact duplicate records before splitting to reduce the risk of identical observations appearing in both training and test sets. It reports the remaining row count. This can substantially reduce the effective sample size, so interpret metrics cautiously and disclose this choice in academic reports.
 
-Dataset column names can vary slightly between copies. The training script normalizes common spelling variations. **The dataset is not redistributed here**; download it from the source and place the CSV at `data/raw/milknew.csv`.
+The dataset is not redistributed. Download it from Kaggle and place the CSV at `data/raw/milknew.csv`.
 
 ## Project structure
 ```
@@ -23,18 +22,19 @@ Dataset column names can vary slightly between copies. The training script norma
 │   └── README.md
 ├── models/                   # Trained model artifacts (generated)
 ├── reports/
-│   ├── figures/              # Generated charts
+│   ├── figures/              # Generated EDA and evaluation charts
 │   └── metrics/              # Generated metric tables/reports
 ├── src/
-│   ├── train.py              # Preprocessing, training, evaluation, charts
-│   └── predict.py            # Predict a new milk sample using saved model
+│   ├── eda.py                # Exploratory data analysis and plots
+│   ├── train.py              # Preprocessing, training, evaluation
+│   └── predict.py            # Prediction for a new sample
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
 
 ## Setup
-Python 3.10 or newer is recommended.
+Python 3.10+ recommended.
 
 ```bash
 git clone https://github.com/192110399/Improving-accurancy-in-Modeling-Milk-Quality-using-XGBoost-Comparing-with-ADABoost..git
@@ -42,40 +42,39 @@ cd Improving-accurancy-in-Modeling-Milk-Quality-using-XGBoost-Comparing-with-ADA
 python -m venv .venv
 ```
 
-Activate the environment:
-
-- Windows: `.venv\\Scripts\\activate`
-- macOS/Linux: `source .venv/bin/activate`
-
-Install dependencies:
+Activate: Windows `.venv\\Scripts\\activate`; macOS/Linux `source .venv/bin/activate`.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Download and place the dataset
-1. Download the CSV from the Kaggle dataset page.
-2. Create the folder `data/raw`.
-3. Rename the downloaded CSV to `milknew.csv`.
-4. Place it at `data/raw/milknew.csv`.
+## Dataset setup
+1. Download the CSV from [Kaggle](https://www.kaggle.com/datasets/cpluzshrijayan/milkquality).
+2. Create `data/raw`.
+3. Rename the file to `milknew.csv` and place it in that folder.
 
-## Train and compare
-Run from the repository root:
+## Step 1 — Exploratory data analysis
+```bash
+python src/eda.py --data data/raw/milknew.csv
+```
+This prints shape, types, missing values, duplicate count and grade distribution. It saves grade distribution, feature histograms and a correlation heatmap under `reports/figures/`.
 
+## Step 2 — Train and compare models
 ```bash
 python src/train.py --data data/raw/milknew.csv
 ```
+The pipeline:
+1. Normalizes common column-name variations and validates required columns.
+2. Converts predictors to numeric values and removes rows without a target.
+3. Removes exact duplicate records.
+4. Encodes the three target classes.
+5. Uses a stratified 80/20 train/test split with random seed 42.
+6. Fits median imputation on training data only.
+7. Trains XGBoost and AdaBoost on the same split.
+8. Calculates accuracy, macro/weighted precision, recall and F1-score.
+9. Saves confusion matrices, a comparison chart, classification reports and trained pipelines.
 
-The script:
-1. Checks required columns, missing values, duplicates and class counts.
-2. Normalizes common column-name variations.
-3. Uses a stratified 80/20 train/test split with a fixed random seed.
-4. Fits preprocessing only on training data to avoid leakage.
-5. Trains XGBoost and AdaBoost on the same split.
-6. Reports accuracy, macro/weighted precision, recall and F1-score.
-7. Saves confusion matrices, a metric comparison chart, classification reports and trained pipelines.
-
-Generated outputs:
+Generated files:
 - `reports/metrics/model_comparison.csv`
 - `reports/metrics/classification_reports.txt`
 - `reports/figures/confusion_matrix_xgboost.png`
@@ -85,39 +84,44 @@ Generated outputs:
 - `models/adaboost_pipeline.joblib`
 - `models/label_encoder.joblib`
 
-## Predict a new sample
-After training, run:
-
+## Step 3 — Predict a new sample
+After training:
 ```bash
 python src/predict.py --model xgboost
+# or
+python src/predict.py --model adaboost
 ```
+Enter pH, temperature, taste, odor, fat, turbidity and colour. The binary attributes use 0/1. Check the dataset's encoding before entering values. Predictions are educational estimates, not laboratory certification or food-safety tests.
 
-Enter pH, temperature, taste, odor, fat, turbidity and colour when prompted. Use 0/1 for binary inputs. The model output is a prediction based on the training dataset; it is not a laboratory certification or food-safety test.
-
-## Evaluation methodology
-- **Accuracy:** fraction of correct predictions.
-- **Precision:** reliability of positive predictions, reported macro and weighted.
-- **Recall:** proportion of actual class members correctly identified.
+## Methodology and metrics
+- **Accuracy:** correctly classified samples / all test samples.
+- **Precision:** reliability of predictions for a class.
+- **Recall:** fraction of actual members of a class correctly identified.
 - **F1-score:** harmonic mean of precision and recall.
-- **Confusion matrix:** class-level error analysis.
+- **Macro average:** gives each class equal weight; useful when class counts differ.
+- **Weighted average:** weights class metrics by support.
+- **Confusion matrix:** reveals which grades are confused with one another.
 
-Both models use the same holdout data. A fixed random seed makes the split reproducible. The preprocessing pipeline is fitted on training data only. No oversampling is applied to the test set. Because this is a relatively small, manually collected dataset, report class-wise metrics and interpret very high scores cautiously; duplicate or near-duplicate records can make random holdout estimates optimistic.
+Both models use the same held-out test set. The preprocessing pipeline is fitted on training data only. The macro F1-score is used as the primary comparison metric, with accuracy and class-wise results reported alongside it.
 
 ## Research questions
 1. Which algorithm achieves higher test accuracy?
-2. Which model provides the strongest macro F1-score across all grades?
+2. Which model has the strongest macro F1-score across all grades?
 3. Which quality grade is most frequently misclassified?
-4. Do the two algorithms show different precision/recall trade-offs?
+4. Do the models show different precision/recall trade-offs?
 
 ## Limitations
-- Dataset size and collection method may limit generalization.
-- Sensory attributes are represented as simplified numeric/binary variables.
-- Predictions reflect dataset patterns and should not replace validated dairy laboratory testing.
-- Results are not guaranteed to match other published implementations because splits, preprocessing and duplicate handling differ.
+- The dataset is small and manually collected; generalization to real dairy production is not guaranteed.
+- Exact duplicates can greatly reduce the effective dataset size when removed.
+- Sensory variables are simplified binary indicators.
+- Random holdout scores may vary with dataset version and split.
+- Model predictions must not replace validated dairy laboratory testing.
+
+## Suggested abstract
+This project investigates milk quality classification using two ensemble learning algorithms, XGBoost and AdaBoost. The dataset contains pH, temperature, taste, odor, fat, turbidity and colour measurements, with milk grade categorized as low, medium or high. The workflow includes data validation, exploratory analysis, duplicate handling, target encoding and a stratified train-test split. Both algorithms are evaluated on the same held-out data using accuracy, precision, recall, macro F1-score and confusion matrices. The experimental results generated by the supplied pipeline are used to identify the stronger model and analyze class-wise errors. The study provides a reproducible comparison of boosting methods for an educational milk-quality prediction task.
 
 ## Author
-**Gokul S.**  
-Computer Science Engineering
+**Gokul S.** — Computer Science Engineering
 
 ## License
-This repository's source code is provided under the MIT License. The dataset remains subject to its original provider's terms; download and use it in accordance with those terms.
+Source code is provided under the MIT License. The dataset remains subject to the original provider's terms; download and use it accordingly.
