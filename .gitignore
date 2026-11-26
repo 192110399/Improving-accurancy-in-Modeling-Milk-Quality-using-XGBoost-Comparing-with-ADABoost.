@@ -1,0 +1,13 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.DS_Store
+
+# Dataset and generated artifacts
+data/raw/*.csv
+models/*.joblib
+reports/figures/*.png
+reports/metrics/*.csv
+reports/metrics/*.txt
